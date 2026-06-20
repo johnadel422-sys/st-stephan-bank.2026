@@ -292,7 +292,7 @@
 <body>
 
 <div class="conn-warning" id="connWarning">
-  ⚠️ لم يتم ضبط إعدادات Firebase بعد. افتح ملف الكود وأضف بيانات مشروعك في أعلى قسم السكربت.
+  ⚠️ لم يتم ضبط رابط Google Apps Script بعد. افتح ملف الكود وضع رابط الـ Web App في أعلى قسم السكربت.
 </div>
 
 <div class="hero">
@@ -368,46 +368,20 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- ============================================================ -->
-<!-- Firebase SDK (compat version — simplest to use, no build step) -->
-<!-- ============================================================ -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-
 <script>
 /* ============================================================
-   FIREBASE CONFIGURATION
-   ضع هنا بيانات مشروعك من Firebase Console
-   (Project settings → General → Your apps → SDK setup and configuration)
+   ضع هنا رابط الـ Web App اللي حصلت عليه من Google Apps Script
+   (Deploy → New deployment → Web app → Deploy → نسخ الرابط)
    ============================================================ */
-const firebaseConfig = {
-  apiKey: "ضع_API_KEY_هنا",
-  authDomain: "ضع_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://ضع_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId: "ضع_PROJECT_ID",
-  storageBucket: "ضع_PROJECT_ID.appspot.com",
-  messagingSenderId: "ضع_SENDER_ID",
-  appId: "ضع_APP_ID"
-};
+const APPS_SCRIPT_URL = "ضع_رابط_Apps_Script_هنا";
 
-/* كلمة سر المشرف — غيّرها لو حبيت */
+/* كلمة سر المشرف — لازم تكون نفسها المكتوبة في كود Apps Script (ADMIN_PASSWORD) */
 const ADMIN_PASSWORD = "john2026";
 
 /* ============================================================ */
 
-let firebaseReady = false;
-let db = null;
-
-try{
-  if(firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("ضع_") === -1){
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.database();
-    firebaseReady = true;
-  } else {
-    document.getElementById('connWarning').style.display = 'block';
-  }
-}catch(e){
-  console.error('Firebase init error:', e);
+let backendReady = APPS_SCRIPT_URL.indexOf("ضع_") === -1;
+if(!backendReady){
   document.getElementById('connWarning').style.display = 'block';
 }
 
@@ -423,46 +397,64 @@ function showToast(msg, isError=false){
   t._timer = setTimeout(()=>t.classList.remove('show'), 2400);
 }
 
-/* ---------- Realtime sync with Firebase ---------- */
-function listenForData(){
-  if(!firebaseReady){
+/* ---------- جلب البيانات من Google Apps Script ---------- */
+let pollTimer = null;
+
+function loadData(){
+  if(!backendReady){
     document.getElementById('tableWrap').innerHTML =
-      '<div class="empty-state">⚠️ لم يتم ضبط Firebase بعد. راجع تعليمات الإعداد.</div>';
+      '<div class="empty-state">⚠️ لم يتم ضبط رابط Apps Script بعد. راجع تعليمات الإعداد.</div>';
     return;
   }
-  db.ref('children').on('value', (snapshot)=>{
-    const val = snapshot.val();
-    childrenData = val ? Object.values(val) : [];
-    renderTable();
-  }, (error)=>{
-    console.error('Firebase read error:', error);
-    showToast('تعذر الاتصال بقاعدة البيانات', true);
-  });
+  fetch(APPS_SCRIPT_URL)
+    .then(res => res.json())
+    .then(data => {
+      if(data.ok){
+        childrenData = data.children || [];
+        renderTable();
+      } else {
+        showToast(data.error || 'تعذر تحميل البيانات', true);
+      }
+    })
+    .catch(err => {
+      console.error('Fetch error:', err);
+      showToast('تعذر الاتصال بقاعدة البيانات', true);
+    });
 }
 
-function saveAllData(){
+function listenForData(){
+  loadData();
+  // تحديث تلقائي كل 15 ثانية لمحاكاة التحديث اللحظي
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(loadData, 15000);
+}
+
+function sendAction(payload){
   return new Promise((resolve)=>{
-    if(!firebaseReady){
-      showToast('Firebase غير مُهيّأ', true);
-      resolve(false);
+    if(!backendReady){
+      showToast('رابط Apps Script غير مُهيّأ', true);
+      resolve({ok:false});
       return;
     }
-    // store as object keyed by name to make updates/deletes natural
-    const obj = {};
-    childrenData.forEach(c => { obj[sanitizeKey(c.name)] = c; });
-    db.ref('children').set(obj)
-      .then(()=> resolve(true))
-      .catch((err)=>{
-        console.error('Firebase write error:', err);
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({password: ADMIN_PASSWORD}, payload))
+    })
+      .then(res => res.json())
+      .then(data => {
+        if(data.ok && data.children){
+          childrenData = data.children;
+          renderTable();
+        }
+        resolve(data);
+      })
+      .catch(err => {
+        console.error('Apps Script write error:', err);
         showToast('حدث خطأ أثناء الحفظ', true);
-        resolve(false);
+        resolve({ok:false});
       });
   });
-}
-
-function sanitizeKey(name){
-  // Firebase keys cannot contain . $ # [ ] /
-  return name.replace(/[.#$\[\]\/]/g, '_');
 }
 
 /* ---------- Rendering ---------- */
@@ -611,25 +603,19 @@ async function handleAddUpdate(){
   const balance = Number(balanceRaw);
   addBtn.disabled = true;
 
-  const existingIndex = childrenData.findIndex(c => c.name === name);
-  if(existingIndex >= 0){
-    childrenData[existingIndex].balance = balance;
-  } else {
-    childrenData.push({name, balance});
-  }
-
-  const success = await saveAllData();
+  const wasExisting = childrenData.some(c => c.name === name);
+  const result = await sendAction({action: 'add_or_update', name, balance});
   addBtn.disabled = false;
 
-  if(success){
+  if(result.ok){
     msg.style.color = '#1f8a3a';
-    msg.textContent = existingIndex >= 0 ? 'تم تحديث الرصيد بنجاح ✓' : 'تم إضافة الطفل بنجاح ✓';
+    msg.textContent = wasExisting ? 'تم تحديث الرصيد بنجاح ✓' : 'تم إضافة الطفل بنجاح ✓';
     nameInput.value = '';
     balanceInput.value = '';
     showToast('تم الحفظ بنجاح');
   } else {
     msg.style.color = '#c0392b';
-    msg.textContent = 'حدث خطأ، حاول مرة أخرى';
+    msg.textContent = result.error || 'حدث خطأ، حاول مرة أخرى';
   }
 }
 
@@ -653,11 +639,10 @@ async function handleDelete(){
   }
 
   delBtn.disabled = true;
-  childrenData.splice(existingIndex, 1);
-  const success = await saveAllData();
+  const result = await sendAction({action: 'delete', name});
   delBtn.disabled = false;
 
-  if(success){
+  if(result.ok){
     msg.style.color = '#1f8a3a';
     msg.textContent = 'تم الحذف بنجاح ✓';
     nameInput.value = '';
@@ -665,7 +650,7 @@ async function handleDelete(){
     showToast('تم الحذف بنجاح');
   } else {
     msg.style.color = '#c0392b';
-    msg.textContent = 'حدث خطأ، حاول مرة أخرى';
+    msg.textContent = result.error || 'حدث خطأ، حاول مرة أخرى';
   }
 }
 
