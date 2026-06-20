@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بنك حصة الشهيد أسطفانوس</title>
+<style>
+  :root{
+    --maroon:#7a1e1e;
+    --maroon-dark:#5c1414;
+    --cream:#fbf3e7;
+    --cream-2:#f5e9d8;
+    --gold:#e8a33d;
+    --gold-dark:#c97f1f;
+    --silver:#9aa0a6;
+    --bronze:#b5651d;
+    --green:#1f8a3a;
+    --ink:#2b2118;
+    --muted:#8a7c6a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI','Tahoma','Arial',sans-serif;
+    background:var(--cream);
+    color:var(--ink);
+  }
+  .hero{
+    position:relative;
+    background:linear-gradient(180deg,#fdf6ea 0%, #f3dfc0 100%);
+    padding:36px 20px 90px;
+    text-align:center;
+    overflow:hidden;
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    left:0;right:0;bottom:0;
+    height:60px;
+    background:var(--maroon);
+    border-radius:50% 50% 0 0 / 100% 100% 0 0;
+    transform:translateY(40px) scaleX(1.3);
+  }
+  .hero-title{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:18px;
+    font-size:2.4rem;
+    font-weight:800;
+    color:var(--maroon);
+    margin:0;
+    flex-wrap:wrap;
+  }
+  .cross{
+    font-size:1.8rem;
+    color:var(--gold);
+  }
+  .icon-wrap{
+    margin:18px auto 0;
+    width:280px;
+    height:280px;
+    border-radius:50%;
+    overflow:hidden;
+    border:6px solid var(--gold);
+    box-shadow:0 10px 30px rgba(0,0,0,.15);
+    position:relative;
+    z-index:2;
+  }
+  .container{
+    max-width:1500px;
+    margin:0 auto;
+    padding:0 24px 40px;
+    display:grid;
+    grid-template-columns:340px 1fr;
+    gap:24px;
+    margin-top:-40px;
+    position:relative;
+    z-index:3;
+  }
+  @media (max-width:900px){
+    .container{grid-template-columns:1fr;}
+  }
+  .card{
+    background:var(--cream);
+    border-radius:14px;
+    box-shadow:0 6px 24px rgba(0,0,0,.08);
+    overflow:hidden;
+    border:1px solid #ecdcc0;
+  }
+  .card-header{
+    background:var(--maroon);
+    color:#fff;
+    padding:14px 18px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:1.05rem;
+  }
+  .card-body{padding:20px;}
+  .field-label{
+    font-weight:700;
+    text-align:center;
+    margin-bottom:14px;
+    color:var(--ink);
+  }
+  .input-wrap{
+    position:relative;
+    margin-bottom:14px;
+  }
+  .input-wrap input{
+    width:100%;
+    padding:12px 44px 12px 14px;
+    border:1px solid #ddc9a8;
+    border-radius:8px;
+    background:#fff;
+    font-size:1rem;
+    text-align:right;
+    direction:rtl;
+  }
+  .input-wrap input:focus{
+    outline:2px solid var(--gold);
+    border-color:var(--gold);
+  }
+  .input-icon{
+    position:absolute;
+    right:14px;
+    top:50%;
+    transform:translateY(-50%);
+    color:var(--muted);
+    font-size:1.1rem;
+  }
+  .btn-row{
+    display:flex;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .btn{
+    flex:1;
+    padding:12px 10px;
+    border:none;
+    border-radius:8px;
+    font-weight:700;
+    font-size:.95rem;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    color:#fff;
+    transition:filter .15s ease, transform .05s ease;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-add{background:var(--green);}
+  .btn-add:hover{filter:brightness(1.08);}
+  .btn-del{background:#c0392b;}
+  .btn-del:hover{filter:brightness(1.08);}
+  .btn:disabled{opacity:.6;cursor:not-allowed;}
+  .hint-box{
+    background:#fdf3da;
+    border:1px solid #f0d999;
+    border-radius:8px;
+    padding:12px 14px;
+    text-align:center;
+    font-size:.85rem;
+    color:#7a5c1e;
+    line-height:1.6;
+  }
+  .locked-box{
+    padding:40px 20px;
+    text-align:center;
+  }
+  .locked-box .lock-icon{font-size:2.4rem;color:var(--gold-dark);margin-bottom:14px;}
+  .locked-box input{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid #ddc9a8;
+    border-radius:8px;
+    text-align:center;
+    font-size:1rem;
+    margin-bottom:12px;
+    direction:ltr;
+  }
+  .locked-box button{
+    width:100%;
+    padding:12px;
+    background:var(--maroon);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    font-weight:700;
+    cursor:pointer;
+    font-size:1rem;
+  }
+  .locked-box button:hover{background:var(--maroon-dark);}
+  .err-msg{color:#c0392b;font-size:.85rem;margin-top:8px;min-height:18px;}
+  .ok-msg{color:var(--green);font-size:.85rem;margin-top:8px;min-height:18px;font-weight:600;}
+
+  .search-wrap{padding:16px 20px 0;}
+  .search-box{position:relative;}
+  .search-box input{width:100%;padding:12px 44px 12px 14px;border:1px solid #ddc9a8;border-radius:24px;text-align:right;direction:rtl;font-size:.95rem;background:#fff;}
+  .search-box .input-icon{right:16px;}
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:16px;
+  }
+  thead tr{
+    background:var(--maroon);
+    color:#fff;
+  }
+  thead th{
+    padding:12px 16px;
+    font-weight:700;
+    font-size:.95rem;
+    text-align:center;
+  }
+  thead th:nth-child(2){text-align:right;padding-right:20px;}
+  tbody tr{border-bottom:1px solid #ecdcc0;}
+  tbody tr:nth-child(odd){background:#fdf6ea;}
+  tbody tr:nth-child(even){background:var(--cream);}
+  tbody td{padding:14px 16px;text-align:center;font-size:1rem;}
+  tbody td:nth-child(2){text-align:right;padding-right:20px;font-weight:600;}
+  .balance-cell{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    font-weight:800;
+    color:var(--green);
+    font-size:1.05rem;
+  }
+  .medal{
+    width:22px;height:22px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.1rem;
+  }
+  .rank-badge{
+    display:inline-block;
+    min-width:30px;
+    padding:4px 10px;
+    border-radius:6px;
+    font-weight:800;
+    color:#fff;
+    background:#444;
+  }
+  .rank-1{background:var(--gold-dark);}
+  .rank-2{background:var(--silver);}
+  .rank-3{background:var(--bronze);}
+  .rank-other{background:#fff;color:var(--ink);border:1px solid #ddc9a8;}
+
+  .empty-state{text-align:center;padding:50px 20px;color:var(--muted);}
+  .footer-msg{text-align:center;padding:24px 0 36px;color:var(--maroon);font-weight:700;}
+  .icons-header{font-size:1.3rem;}
+
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--maroon);
+    color:#fff;
+    padding:12px 22px;
+    border-radius:10px;
+    font-weight:700;
+    box-shadow:0 6px 20px rgba(0,0,0,.2);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:50;
+    font-size:.95rem;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .loading-row{text-align:center;padding:30px;color:var(--muted);}
+  .logout-link{
+    background:none;border:none;color:#fff;opacity:.85;
+    font-size:.8rem;cursor:pointer;text-decoration:underline;
+    padding:0;
+  }
+  .logout-link:hover{opacity:1;}
+  .conn-warning{
+    background:#fdecea;border:1px solid #f5b5ad;color:#9b2226;
+    text-align:center;padding:10px 16px;font-size:.85rem;
+    display:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="conn-warning" id="connWarning">
+  ⚠️ لم يتم ضبط إعدادات Firebase بعد. افتح ملف الكود وأضف بيانات مشروعك في أعلى قسم السكربت.
+</div>
+
+<div class="hero">
+  <h1 class="hero-title">
+    <span class="cross">✝</span>
+    بنك حصة الشهيد أسطفانوس
+    <span class="cross">✝</span>
+  </h1>
+  <div class="icon-wrap">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;">
+      <defs>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#cfe3e8"/>
+          <stop offset="100%" stop-color="#a9c9b8"/>
+        </linearGradient>
+        <radialGradient id="haloGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="60%" stop-color="#fff7d6"/>
+          <stop offset="100%" stop-color="#e8a33d"/>
+        </radialGradient>
+      </defs>
+      <rect width="200" height="200" fill="url(#skyGrad)"/>
+      <path d="M0,160 Q100,135 200,160 L200,200 L0,200 Z" fill="#7d9b6a"/>
+      <circle cx="100" cy="70" r="34" fill="url(#haloGrad)" stroke="#c97f1f" stroke-width="2"/>
+      <circle cx="100" cy="72" r="18" fill="#f2c9a0"/>
+      <path d="M84,64 Q100,48 116,64 Q116,74 110,72 Q100,62 90,72 Q84,74 84,64 Z" fill="#5a3a22"/>
+      <path d="M70,190 L70,120 Q100,98 130,120 L130,190 Z" fill="#fdfdfb" stroke="#ddd0b8" stroke-width="1.5"/>
+      <path d="M88,118 L80,190 L92,190 L98,122 Z" fill="#a8202c"/>
+      <path d="M112,118 L120,190 L108,190 L102,122 Z" fill="#a8202c"/>
+      <path d="M86,120 Q100,108 114,120" fill="none" stroke="#e8a33d" stroke-width="3"/>
+      <path d="M70,130 Q45,140 35,160" fill="none" stroke="#fdfdfb" stroke-width="14" stroke-linecap="round"/>
+      <path d="M130,130 Q150,150 160,150" fill="none" stroke="#fdfdfb" stroke-width="14" stroke-linecap="round"/>
+      <circle cx="33" cy="162" r="7" fill="#f2c9a0"/>
+      <circle cx="161" cy="151" r="7" fill="#f2c9a0"/>
+      <g transform="translate(100,18)" fill="#c97f1f">
+        <rect x="-2.5" y="0" width="5" height="20" rx="1"/>
+        <rect x="-8" y="5" width="16" height="5" rx="1"/>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="card" id="adminCard">
+    <div class="card-header">
+      <span>لوحة التحكم (للمشرف فقط)</span>
+      <span id="adminHeaderIcon">🔒</span>
+    </div>
+    <div class="card-body" id="adminBody"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="icons-header">👥</span>
+      <span>قائمة الأطفال وترتيب الأرصدة</span>
+    </div>
+    <div class="search-wrap">
+      <div class="search-box">
+        <span class="input-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="ابحث عن اسم طفل...">
+      </div>
+    </div>
+    <div class="card-body" style="padding-top:8px;">
+      <div id="tableWrap">
+        <div class="loading-row">جاري التحميل...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer-msg">♥ بارك الله فيكم جميعاً</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ============================================================ -->
+<!-- Firebase SDK (compat version — simplest to use, no build step) -->
+<!-- ============================================================ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+/* ============================================================
+   FIREBASE CONFIGURATION
+   ضع هنا بيانات مشروعك من Firebase Console
+   (Project settings → General → Your apps → SDK setup and configuration)
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "ضع_API_KEY_هنا",
+  authDomain: "ضع_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://ضع_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId: "ضع_PROJECT_ID",
+  storageBucket: "ضع_PROJECT_ID.appspot.com",
+  messagingSenderId: "ضع_SENDER_ID",
+  appId: "ضع_APP_ID"
+};
+
+/* كلمة سر المشرف — غيّرها لو حبيت */
+const ADMIN_PASSWORD = "john2026";
+
+/* ============================================================ */
+
+let firebaseReady = false;
+let db = null;
+
+try{
+  if(firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("ضع_") === -1){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    firebaseReady = true;
+  } else {
+    document.getElementById('connWarning').style.display = 'block';
+  }
+}catch(e){
+  console.error('Firebase init error:', e);
+  document.getElementById('connWarning').style.display = 'block';
+}
+
+let isAdminUnlocked = false;
+let childrenData = []; // [{name, balance}]
+
+function showToast(msg, isError=false){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isError ? '#c0392b' : '#7a1e1e';
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+/* ---------- Realtime sync with Firebase ---------- */
+function listenForData(){
+  if(!firebaseReady){
+    document.getElementById('tableWrap').innerHTML =
+      '<div class="empty-state">⚠️ لم يتم ضبط Firebase بعد. راجع تعليمات الإعداد.</div>';
+    return;
+  }
+  db.ref('children').on('value', (snapshot)=>{
+    const val = snapshot.val();
+    childrenData = val ? Object.values(val) : [];
+    renderTable();
+  }, (error)=>{
+    console.error('Firebase read error:', error);
+    showToast('تعذر الاتصال بقاعدة البيانات', true);
+  });
+}
+
+function saveAllData(){
+  return new Promise((resolve)=>{
+    if(!firebaseReady){
+      showToast('Firebase غير مُهيّأ', true);
+      resolve(false);
+      return;
+    }
+    // store as object keyed by name to make updates/deletes natural
+    const obj = {};
+    childrenData.forEach(c => { obj[sanitizeKey(c.name)] = c; });
+    db.ref('children').set(obj)
+      .then(()=> resolve(true))
+      .catch((err)=>{
+        console.error('Firebase write error:', err);
+        showToast('حدث خطأ أثناء الحفظ', true);
+        resolve(false);
+      });
+  });
+}
+
+function sanitizeKey(name){
+  // Firebase keys cannot contain . $ # [ ] /
+  return name.replace(/[.#$\[\]\/]/g, '_');
+}
+
+/* ---------- Rendering ---------- */
+
+function medalFor(rank){
+  if(rank === 1) return '<span class="medal">🥇</span>';
+  if(rank === 2) return '<span class="medal">🥈</span>';
+  if(rank === 3) return '<span class="medal">🥉</span>';
+  return '<span class="medal"></span>';
+}
+
+function rankBadgeClass(rank){
+  if(rank===1) return 'rank-1';
+  if(rank===2) return 'rank-2';
+  if(rank===3) return 'rank-3';
+  return 'rank-other';
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderTable(){
+  const wrap = document.getElementById('tableWrap');
+  const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+
+  const sorted = [...childrenData].sort((a,b)=> b.balance - a.balance);
+  const filtered = query
+    ? sorted.filter(c => c.name.toLowerCase().includes(query))
+    : sorted;
+
+  if(sorted.length === 0){
+    wrap.innerHTML = '<div class="empty-state">لا يوجد أطفال مسجلين بعد. استخدم لوحة التحكم لإضافة أول طفل 👆</div>';
+    return;
+  }
+  if(filtered.length === 0){
+    wrap.innerHTML = '<div class="empty-state">لا توجد نتائج مطابقة للبحث</div>';
+    return;
+  }
+
+  let rows = '';
+  filtered.forEach(child=>{
+    const rank = sorted.findIndex(c => c.name === child.name) + 1;
+    rows += `
+      <tr>
+        <td><span class="rank-badge ${rankBadgeClass(rank)}">${rank}</span></td>
+        <td>${escapeHtml(child.name)}</td>
+        <td><div class="balance-cell">${medalFor(rank)}<span>${child.balance}</span></div></td>
+      </tr>
+    `;
+  });
+
+  wrap.innerHTML = `
+    <table>
+      <thead>
+        <tr><th>#</th><th>اسم الطفل</th><th>الرصيد</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+document.getElementById('searchInput').addEventListener('input', renderTable);
+
+/* ---------- Admin panel ---------- */
+
+function renderLockedAdmin(){
+  document.getElementById('adminHeaderIcon').textContent = '🔒';
+  const body = document.getElementById('adminBody');
+  body.innerHTML = `
+    <div class="locked-box">
+      <div class="lock-icon">🔒</div>
+      <input type="password" id="adminPasswordInput" placeholder="كلمة سر المشرف">
+      <button id="unlockBtn">دخول</button>
+      <div class="err-msg" id="adminErr"></div>
+    </div>
+  `;
+  document.getElementById('unlockBtn').addEventListener('click', tryUnlock);
+  document.getElementById('adminPasswordInput').addEventListener('keydown', e=>{
+    if(e.key === 'Enter') tryUnlock();
+  });
+}
+
+function tryUnlock(){
+  const val = document.getElementById('adminPasswordInput').value;
+  if(val === ADMIN_PASSWORD){
+    isAdminUnlocked = true;
+    renderUnlockedAdmin();
+  } else {
+    document.getElementById('adminErr').textContent = 'كلمة السر غير صحيحة';
+  }
+}
+
+function renderUnlockedAdmin(){
+  document.getElementById('adminHeaderIcon').innerHTML = '<button class="logout-link" id="logoutBtn">خروج</button>';
+  const body = document.getElementById('adminBody');
+  body.innerHTML = `
+    <div class="field-label">اضافة أو تحديث رصيد</div>
+    <div class="input-wrap">
+      <input type="text" id="childNameInput" placeholder="اسم الطفل">
+      <span class="input-icon">👤</span>
+    </div>
+    <div class="input-wrap">
+      <input type="number" id="childBalanceInput" placeholder="الرصيد">
+      <span class="input-icon">🪙</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-add" id="addUpdateBtn">➕ اضافة / تحديث</button>
+      <button class="btn btn-del" id="deleteBtn">🗑 حذف</button>
+    </div>
+    <div class="ok-msg" id="adminMsg"></div>
+    <div class="hint-box">
+      💡 اكتب اسم الطفل ورصيده ثم اضغط إضافة / تحديث
+    </div>
+  `;
+  document.getElementById('addUpdateBtn').addEventListener('click', handleAddUpdate);
+  document.getElementById('deleteBtn').addEventListener('click', handleDelete);
+  document.getElementById('logoutBtn').addEventListener('click', ()=>{
+    isAdminUnlocked = false;
+    renderLockedAdmin();
+  });
+}
+
+async function handleAddUpdate(){
+  const nameInput = document.getElementById('childNameInput');
+  const balanceInput = document.getElementById('childBalanceInput');
+  const msg = document.getElementById('adminMsg');
+  const addBtn = document.getElementById('addUpdateBtn');
+
+  const name = nameInput.value.trim();
+  const balanceRaw = balanceInput.value.trim();
+
+  if(!name){
+    msg.style.color = '#c0392b';
+    msg.textContent = 'من فضلك اكتب اسم الطفل';
+    return;
+  }
+  if(balanceRaw === '' || isNaN(Number(balanceRaw))){
+    msg.style.color = '#c0392b';
+    msg.textContent = 'من فضلك اكتب رصيد صحيح';
+    return;
+  }
+
+  const balance = Number(balanceRaw);
+  addBtn.disabled = true;
+
+  const existingIndex = childrenData.findIndex(c => c.name === name);
+  if(existingIndex >= 0){
+    childrenData[existingIndex].balance = balance;
+  } else {
+    childrenData.push({name, balance});
+  }
+
+  const success = await saveAllData();
+  addBtn.disabled = false;
+
+  if(success){
+    msg.style.color = '#1f8a3a';
+    msg.textContent = existingIndex >= 0 ? 'تم تحديث الرصيد بنجاح ✓' : 'تم إضافة الطفل بنجاح ✓';
+    nameInput.value = '';
+    balanceInput.value = '';
+    showToast('تم الحفظ بنجاح');
+  } else {
+    msg.style.color = '#c0392b';
+    msg.textContent = 'حدث خطأ، حاول مرة أخرى';
+  }
+}
+
+async function handleDelete(){
+  const nameInput = document.getElementById('childNameInput');
+  const msg = document.getElementById('adminMsg');
+  const delBtn = document.getElementById('deleteBtn');
+
+  const name = nameInput.value.trim();
+  if(!name){
+    msg.style.color = '#c0392b';
+    msg.textContent = 'من فضلك اكتب اسم الطفل المطلوب حذفه';
+    return;
+  }
+
+  const existingIndex = childrenData.findIndex(c => c.name === name);
+  if(existingIndex < 0){
+    msg.style.color = '#c0392b';
+    msg.textContent = 'لا يوجد طفل بهذا الاسم';
+    return;
+  }
+
+  delBtn.disabled = true;
+  childrenData.splice(existingIndex, 1);
+  const success = await saveAllData();
+  delBtn.disabled = false;
+
+  if(success){
+    msg.style.color = '#1f8a3a';
+    msg.textContent = 'تم الحذف بنجاح ✓';
+    nameInput.value = '';
+    document.getElementById('childBalanceInput').value = '';
+    showToast('تم الحذف بنجاح');
+  } else {
+    msg.style.color = '#c0392b';
+    msg.textContent = 'حدث خطأ، حاول مرة أخرى';
+  }
+}
+
+/* ---------- init ---------- */
+renderLockedAdmin();
+listenForData();
+</script>
+
+</body>
+</html>
