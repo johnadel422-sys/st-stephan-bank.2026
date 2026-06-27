@@ -631,7 +631,7 @@ function renderUnlockedAdmin(){
     <div class="current-balance-hint" id="currentBalanceHint"></div>
 
     <div class="input-wrap">
-      <input type="number" id="childBalanceInput" placeholder="الرصيد الجديد">
+      <input type="number" id="childBalanceInput" placeholder="الرصيد">
       <span class="input-icon">🪙</span>
     </div>
     <div class="btn-row">
@@ -639,8 +639,8 @@ function renderUnlockedAdmin(){
       <button class="btn btn-del" id="deleteBtn">🗑 حذف</button>
     </div>
     <div class="ok-msg" id="adminMsg"></div>
-    <div class="hint-box">
-      💡 اختار اسم طفل موجود من القايمة لتحديث رصيده، أو دوس "طفل جديد" لإضافة اسم جديد
+    <div class="hint-box" id="adminHintBox">
+      💡 اختار اسم طفل موجود من القايمة واكتب عدد النقط اللي تحب تضيفها على رصيده الحالي، أو دوس "طفل جديد" لإضافة اسم جديد برصيد ابتدائي
     </div>
   `;
 
@@ -714,7 +714,7 @@ function setMode(mode, skipRebuildIfSame){
     balanceInput.placeholder = 'الرصيد';
     balanceInput.value = '';
   } else {
-    balanceInput.placeholder = 'الرصيد الجديد';
+    balanceInput.placeholder = 'عدد النقط المراد إضافتها';
     // لو فيه اسم متحدد فعلاً (مثلاً أول مرة بيفتح والقايمة فيها عناصر) حدّث الهينت
     const sel = document.getElementById('childNameSelect');
     if(sel && sel.value){
@@ -730,7 +730,7 @@ function onExistingNameChange(){
   const child = childrenData.find(c => c.name === name);
   if(child){
     hint.style.display = 'block';
-    hint.textContent = `الرصيد الحالي لـ "${child.name}": ${child.balance}`;
+    hint.textContent = `الرصيد الحالي لـ "${child.name}": ${child.balance} — اكتب عدد النقط اللي عايز تضيفها`;
   } else {
     hint.style.display = 'none';
   }
@@ -780,16 +780,26 @@ async function handleAddUpdate(){
     return;
   }
 
-  const balance = Number(balanceRaw);
+  const balanceEntered = Number(balanceRaw);
   addBtn.disabled = true;
 
-  const wasExisting = childrenData.some(c => c.name === name);
+  const existingChild = childrenData.find(c => c.name === name);
+  const wasExisting = !!existingChild;
+
+  // في وضع "اختر طفل موجود": الرقم المكتوب يُضاف على الرصيد الحالي (مش يستبدله)
+  // في وضع "طفل جديد": الرقم المكتوب هو الرصيد الابتدائي كما هو
+  const balance = (adminMode === 'existing' && existingChild)
+    ? existingChild.balance + balanceEntered
+    : balanceEntered;
+
   const result = await sendAction({action: 'add_or_update', name, balance});
   addBtn.disabled = false;
 
   if(result.ok){
     msg.style.color = '#1f8a3a';
-    msg.textContent = wasExisting ? 'تم تحديث الرصيد بنجاح ✓' : 'تم إضافة الطفل بنجاح ✓';
+    msg.textContent = wasExisting
+      ? `تم إضافة ${balanceEntered} نقطة — الرصيد الجديد: ${balance} ✓`
+      : 'تم إضافة الطفل بنجاح ✓';
     balanceInput.value = '';
 
     if(adminMode === 'new'){
