@@ -109,7 +109,8 @@
     position:relative;
     margin-bottom:14px;
   }
-  .input-wrap input{
+  .input-wrap input,
+  .input-wrap select{
     width:100%;
     padding:12px 44px 12px 14px;
     border:1px solid #ddc9a8;
@@ -118,8 +119,15 @@
     font-size:1rem;
     text-align:right;
     direction:rtl;
+    font-family:inherit;
+    appearance:none;
+    -webkit-appearance:none;
   }
-  .input-wrap input:focus{
+  .input-wrap select{
+    cursor:pointer;
+  }
+  .input-wrap input:focus,
+  .input-wrap select:focus{
     outline:2px solid var(--gold);
     border-color:var(--gold);
   }
@@ -130,6 +138,53 @@
     transform:translateY(-50%);
     color:var(--muted);
     font-size:1.1rem;
+    pointer-events:none;
+  }
+  .select-caret{
+    position:absolute;
+    left:14px;
+    top:50%;
+    transform:translateY(-50%);
+    color:var(--muted);
+    font-size:.8rem;
+    pointer-events:none;
+  }
+  .mode-toggle{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+    background:#f0e2c4;
+    padding:4px;
+    border-radius:8px;
+  }
+  .mode-toggle button{
+    flex:1;
+    padding:8px 6px;
+    border:none;
+    border-radius:6px;
+    background:transparent;
+    font-weight:700;
+    font-size:.85rem;
+    cursor:pointer;
+    color:var(--ink);
+    font-family:inherit;
+    transition:background .15s ease, color .15s ease;
+  }
+  .mode-toggle button.active{
+    background:var(--maroon);
+    color:#fff;
+  }
+  .current-balance-hint{
+    background:#eaf5ec;
+    border:1px solid #bfe3c6;
+    color:#1f6b30;
+    border-radius:8px;
+    padding:8px 12px;
+    font-size:.85rem;
+    text-align:center;
+    margin-bottom:14px;
+    display:none;
+    font-weight:600;
   }
   .btn-row{
     display:flex;
@@ -388,6 +443,9 @@ if(!backendReady){
 let isAdminUnlocked = false;
 let childrenData = []; // [{name, balance}]
 
+/* وضع الإدخال الحالي: 'existing' = اختيار من القايمة، 'new' = كتابة اسم جديد */
+let adminMode = 'existing';
+
 function showToast(msg, isError=false){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -412,6 +470,8 @@ function loadData(){
       if(data.ok){
         childrenData = data.children || [];
         renderTable();
+        // لو لوحة التحكم مفتوحة ومتبني على قايمة الأسماء، حدّثها كمان
+        if(isAdminUnlocked) refreshNameSelectOptions();
       } else {
         showToast(data.error || 'تعذر تحميل البيانات', true);
       }
@@ -544,6 +604,7 @@ function tryUnlock(){
   const val = document.getElementById('adminPasswordInput').value;
   if(val === ADMIN_PASSWORD){
     isAdminUnlocked = true;
+    adminMode = childrenData.length > 0 ? 'existing' : 'new';
     renderUnlockedAdmin();
   } else {
     document.getElementById('adminErr').textContent = 'كلمة السر غير صحيحة';
@@ -553,14 +614,24 @@ function tryUnlock(){
 function renderUnlockedAdmin(){
   document.getElementById('adminHeaderIcon').innerHTML = '<button class="logout-link" id="logoutBtn">خروج</button>';
   const body = document.getElementById('adminBody');
+
+  const sortedNames = [...childrenData].sort((a,b)=> a.name.localeCompare(b.name,'ar'));
+  const hasChildren = sortedNames.length > 0;
+
   body.innerHTML = `
     <div class="field-label">اضافة أو تحديث رصيد</div>
-    <div class="input-wrap">
-      <input type="text" id="childNameInput" placeholder="اسم الطفل">
-      <span class="input-icon">👤</span>
+
+    <div class="mode-toggle">
+      <button type="button" id="modeExistingBtn">اختر طفل موجود</button>
+      <button type="button" id="modeNewBtn">طفل جديد</button>
     </div>
+
+    <div id="nameFieldArea"></div>
+
+    <div class="current-balance-hint" id="currentBalanceHint"></div>
+
     <div class="input-wrap">
-      <input type="number" id="childBalanceInput" placeholder="الرصيد">
+      <input type="number" id="childBalanceInput" placeholder="الرصيد الجديد">
       <span class="input-icon">🪙</span>
     </div>
     <div class="btn-row">
@@ -569,9 +640,19 @@ function renderUnlockedAdmin(){
     </div>
     <div class="ok-msg" id="adminMsg"></div>
     <div class="hint-box">
-      💡 اكتب اسم الطفل ورصيده ثم اضغط إضافة / تحديث
+      💡 اختار اسم طفل موجود من القايمة لتحديث رصيده، أو دوس "طفل جديد" لإضافة اسم جديد
     </div>
   `;
+
+  // ابدأ بالوضع المناسب (لو فيه أطفال يبقى الافتراضي "اختيار"، لو القايمة فاضية يبقى "جديد")
+  adminMode = hasChildren ? adminMode : 'new';
+  if(adminMode === 'new' && !hasChildren) adminMode = 'new';
+
+  buildNameField();
+  setMode(adminMode, true);
+
+  document.getElementById('modeExistingBtn').addEventListener('click', ()=> setMode('existing'));
+  document.getElementById('modeNewBtn').addEventListener('click', ()=> setMode('new'));
   document.getElementById('addUpdateBtn').addEventListener('click', handleAddUpdate);
   document.getElementById('deleteBtn').addEventListener('click', handleDelete);
   document.getElementById('logoutBtn').addEventListener('click', ()=>{
@@ -580,18 +661,117 @@ function renderUnlockedAdmin(){
   });
 }
 
+/* يبني حقل الاسم (select أو input) حسب الوضع الحالي */
+function buildNameField(){
+  const area = document.getElementById('nameFieldArea');
+  const sortedNames = [...childrenData].sort((a,b)=> a.name.localeCompare(b.name,'ar'));
+
+  if(adminMode === 'existing'){
+    let options = '<option value="" disabled selected>-- اختر اسم الطفل --</option>';
+    sortedNames.forEach(c=>{
+      options += `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)} (${c.balance})</option>`;
+    });
+    area.innerHTML = `
+      <div class="input-wrap">
+        <select id="childNameSelect">${options}</select>
+        <span class="select-caret">▾</span>
+        <span class="input-icon">👤</span>
+      </div>
+    `;
+    document.getElementById('childNameSelect').addEventListener('change', onExistingNameChange);
+  } else {
+    area.innerHTML = `
+      <div class="input-wrap">
+        <input type="text" id="childNameInput" placeholder="اسم الطفل الجديد">
+        <span class="input-icon">👤</span>
+      </div>
+    `;
+    document.getElementById('childNameInput').addEventListener('input', ()=>{
+      document.getElementById('currentBalanceHint').style.display = 'none';
+    });
+  }
+}
+
+function setMode(mode, skipRebuildIfSame){
+  if(mode === 'existing' && childrenData.length === 0){
+    // مفيش أطفال نضيف ليهم، يبقى نخليه في وضع جديد إجبارياً
+    mode = 'new';
+  }
+  const changed = adminMode !== mode || !skipRebuildIfSame;
+  adminMode = mode;
+
+  document.getElementById('modeExistingBtn').classList.toggle('active', mode === 'existing');
+  document.getElementById('modeNewBtn').classList.toggle('active', mode === 'new');
+
+  if(changed){
+    buildNameField();
+  }
+
+  const hint = document.getElementById('currentBalanceHint');
+  const balanceInput = document.getElementById('childBalanceInput');
+  if(mode === 'new'){
+    hint.style.display = 'none';
+    balanceInput.placeholder = 'الرصيد';
+    balanceInput.value = '';
+  } else {
+    balanceInput.placeholder = 'الرصيد الجديد';
+    // لو فيه اسم متحدد فعلاً (مثلاً أول مرة بيفتح والقايمة فيها عناصر) حدّث الهينت
+    const sel = document.getElementById('childNameSelect');
+    if(sel && sel.value){
+      onExistingNameChange();
+    }
+  }
+}
+
+function onExistingNameChange(){
+  const sel = document.getElementById('childNameSelect');
+  const hint = document.getElementById('currentBalanceHint');
+  const name = sel.value;
+  const child = childrenData.find(c => c.name === name);
+  if(child){
+    hint.style.display = 'block';
+    hint.textContent = `الرصيد الحالي لـ "${child.name}": ${child.balance}`;
+  } else {
+    hint.style.display = 'none';
+  }
+}
+
+/* تحديث خيارات القايمة المنسدلة بدون فقدان الاختيار الحالي، تُستخدم بعد كل تحديث للبيانات */
+function refreshNameSelectOptions(){
+  const sel = document.getElementById('childNameSelect');
+  if(!sel) return;
+  const currentVal = sel.value;
+  buildNameField();
+  const newSel = document.getElementById('childNameSelect');
+  if(newSel && currentVal){
+    newSel.value = currentVal;
+    onExistingNameChange();
+  }
+}
+
+function getSelectedOrTypedName(){
+  if(adminMode === 'existing'){
+    const sel = document.getElementById('childNameSelect');
+    return sel ? sel.value.trim() : '';
+  } else {
+    const inp = document.getElementById('childNameInput');
+    return inp ? inp.value.trim() : '';
+  }
+}
+
 async function handleAddUpdate(){
-  const nameInput = document.getElementById('childNameInput');
   const balanceInput = document.getElementById('childBalanceInput');
   const msg = document.getElementById('adminMsg');
   const addBtn = document.getElementById('addUpdateBtn');
 
-  const name = nameInput.value.trim();
+  const name = getSelectedOrTypedName();
   const balanceRaw = balanceInput.value.trim();
 
   if(!name){
     msg.style.color = '#c0392b';
-    msg.textContent = 'من فضلك اكتب اسم الطفل';
+    msg.textContent = adminMode === 'existing'
+      ? 'من فضلك اختر اسم الطفل من القايمة'
+      : 'من فضلك اكتب اسم الطفل';
     return;
   }
   if(balanceRaw === '' || isNaN(Number(balanceRaw))){
@@ -610,8 +790,19 @@ async function handleAddUpdate(){
   if(result.ok){
     msg.style.color = '#1f8a3a';
     msg.textContent = wasExisting ? 'تم تحديث الرصيد بنجاح ✓' : 'تم إضافة الطفل بنجاح ✓';
-    nameInput.value = '';
     balanceInput.value = '';
+
+    if(adminMode === 'new'){
+      // بعد إضافة طفل جديد، رجّعه يختاره من القايمة عشان يقدر يزود عليه بسهولة المرة الجاية
+      setMode('existing');
+      const sel = document.getElementById('childNameSelect');
+      if(sel){
+        sel.value = name;
+        onExistingNameChange();
+      }
+    } else {
+      onExistingNameChange();
+    }
     showToast('تم الحفظ بنجاح');
   } else {
     msg.style.color = '#c0392b';
@@ -620,14 +811,15 @@ async function handleAddUpdate(){
 }
 
 async function handleDelete(){
-  const nameInput = document.getElementById('childNameInput');
   const msg = document.getElementById('adminMsg');
   const delBtn = document.getElementById('deleteBtn');
 
-  const name = nameInput.value.trim();
+  const name = getSelectedOrTypedName();
   if(!name){
     msg.style.color = '#c0392b';
-    msg.textContent = 'من فضلك اكتب اسم الطفل المطلوب حذفه';
+    msg.textContent = adminMode === 'existing'
+      ? 'من فضلك اختر اسم الطفل المطلوب حذفه'
+      : 'من فضلك اكتب اسم الطفل المطلوب حذفه';
     return;
   }
 
@@ -645,8 +837,14 @@ async function handleDelete(){
   if(result.ok){
     msg.style.color = '#1f8a3a';
     msg.textContent = 'تم الحذف بنجاح ✓';
-    nameInput.value = '';
     document.getElementById('childBalanceInput').value = '';
+    // أعد بناء حقل الاسم لأن القايمة اتغيرت (الاسم المحذوف هيشيل من الاختيارات)
+    if(childrenData.length === 0){
+      setMode('new');
+    } else {
+      buildNameField();
+      document.getElementById('currentBalanceHint').style.display = 'none';
+    }
     showToast('تم الحذف بنجاح');
   } else {
     msg.style.color = '#c0392b';
